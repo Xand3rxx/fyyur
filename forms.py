@@ -1,6 +1,6 @@
 from datetime import datetime
 from flask_wtf import Form
-from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField
+from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField, HiddenField
 from wtforms.validators import DataRequired, AnyOf, URL
 
 class ShowForm(Form):
@@ -15,6 +15,7 @@ class ShowForm(Form):
         validators=[DataRequired()],
         default= datetime.today()
     )
+    csrf_token = HiddenField()
 
 class VenueForm(Form):
     name = StringField(
@@ -125,6 +126,8 @@ class VenueForm(Form):
     seeking_description = StringField(
         'seeking_description'
     )
+    csrf_token = HiddenField()
+
 
 
 

@@ -3,6 +3,20 @@
 {% block content %}
   <div class="form-wrapper">
     <form method="post" class="form" action="/venues/create">
+      {{ form.csrf_token(value_=csrf_token()) }}
+      {% if form.csrf_token.errors %}
+          <div class="warning">You have submitted an invalid CSRF token</div>
+      {% endif %}
+
+      {% if form.errors %}
+        <div class="alert-danger block-message error">
+          <ul class=errors>
+          {% for error in form.errors %}
+            <li class="text-danger">{{ error }}</li>
+          {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
       <h3 class="form-heading">List a new venue <a href="{{ url_for('index') }}" title="Back to homepage"><i class="fa fa-home pull-right"></i></a></h3>
       <div class="form-group">
         <label for="name">Name</label>
@@ -25,7 +39,7 @@
       </div>
       <div class="form-group">
           <label for="phone">Phone</label>
-          {{ form.phone(class_ = 'form-control', placeholder='xxx-xxx-xxxx', autofocus = true) }}
+          {{ form.phone(class_ = 'form-control', placeholder='xxx-xxx-xxxx', autofocus = true, maxlength_='15') }}
         </div>
       <div class="form-group">
         <label for="genres">Genres</label>
