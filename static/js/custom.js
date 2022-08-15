@@ -4,7 +4,7 @@ $(document).ready(function () {
   /**
    * @description Prevent characters or string asides number in phone number input field
    */
-  $("#phone").on("keypress keyup blur", function (event) {
+  $("#phone, #artist_id, #venue_id").on("keypress keyup blur", function (event) {
     $(this).val(
       $(this)
         .val()

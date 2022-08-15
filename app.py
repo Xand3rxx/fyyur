@@ -257,7 +257,7 @@ def create_venue_submission():
         # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
         # return render_template('pages/home.html')
     else:
-        flash('Venue ' + venue_name + ' could not be created due to validation error(s)!', 'error')
+        flash('Venue ' + venue_name + ' could not be listed due to validation error(s)!', 'error')
         flash(form.errors)
         return render_template('forms/new_venue.html', form=form)
 
@@ -459,7 +459,6 @@ def create_artist_form():
 def create_artist_submission():
     form = ArtistForm(request.form)
     artist_name = request.form['name']
-    # return json.dumps(request.form)
     if form.validate():
         error = False
         try:
@@ -479,7 +478,7 @@ def create_artist_submission():
                 artist_name + ' could not be listed.', 'error')
             return render_template('forms/new_artist.html', form=form)
     else:
-        flash('Artist ' + artist_name + ' could not be created due to validation error(s)!', 'error')
+        flash('Artist ' + artist_name + ' could not be listed due to validation error(s)!', 'error')
         flash(form.errors)
         return render_template('forms/new_artist.html', form=form)
 
@@ -541,15 +540,36 @@ def create_shows():
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
-    # called to create new shows in the db, upon submitting new show listing form
-    # TODO: insert form data as a new Show record in the db, instead
-
-    # on successful db insert, flash success
-    flash('Show was successfully listed!')
-    # TODO: on unsuccessful db insert, flash an error instead.
-    # e.g., flash('An error occurred. Show could not be listed.')
-    # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
-    return render_template('pages/home.html')
+    form = ShowForm(request.form)
+    if form.validate():
+        error = False
+        artist_exists = Artist.query.get(request.form['artist_id'])
+        venue_exists = Venue.query.get(request.form['venue_id'])
+        if artist_exists == None:
+            flash('The provided Artist ID does not exists.', 'error')
+            return render_template('forms/new_show.html', form=form)
+        elif venue_exists == None:
+            flash('The provided Venue ID does not exists.', 'error')
+            return render_template('forms/new_show.html', form=form)
+        try:
+            db.session.add(Show(artist_id=artist_exists.id,venue_id=venue_exists.id,start_time=request.form['start_time']))
+            db.session.commit()
+        except:
+            error = True
+            db.session.rollback()
+            print(sys.exc_info())
+        finally:
+            db.session.close()
+        if not error:
+            flash('Show was successfully listed!', 'success')
+            return render_template('pages/home.html')
+        else:
+            flash('An error occurred. Show could not be listed.', 'error')
+            return render_template('forms/new_show.html', form=form)
+    else:
+        flash('Show could not be listed due to validation error(s)!', 'error')
+        flash(form.errors)
+        return render_template('forms/new_show.html', form=form)
 
 
 @app.errorhandler(404)
