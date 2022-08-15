@@ -93,20 +93,24 @@ def venues():
     #     }]
     # }]
 
-    # Set array to hold the venues from the database.
+    # Set array to hold the data to be passed to the view.
     data = []
 
-    venues = Venue.query.with_entities(Venue.city, Venue.state).distinct(Venue.city, Venue.state).all()
+    # Get list of venues
+    venues = Venue.query.all()
+
     for venue in venues:
-        city_venues = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.city == venue[0]).filter(Venue.state == venue[1]).all()
+        venues_in_a_city = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.city == venue.city).all()
+
+        num_upcoming_shows = Venue.query.join(Venue.shows).filter(Show.start_time > datetime.now()).all()
+
         data.append({
-            "city": venue[0],
-            "state": venue[1],
-            "venues": city_venues,
-            "num_upcoming_shows": len([show for show in venue.shows if show.start_time > datetime.now()])
+            "city": venue.city,
+            "state": venue.state,
+            "venues": venues_in_a_city,
+            "num_upcoming_shows": len(num_upcoming_shows)
         })
 
-    # return render_template('pages/venues.html', areas=Venue.query.all())
     return render_template('pages/venues.html', areas=data)
 
 
