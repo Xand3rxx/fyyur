@@ -257,7 +257,7 @@ def create_venue_submission():
         # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
         # return render_template('pages/home.html')
     else:
-        flash('Venue ' + venue_name + ' could not be created due to to validation error(s)!', 'error')
+        flash('Venue ' + venue_name + ' could not be created due to validation error(s)!', 'error')
         flash(form.errors)
         return render_template('forms/new_venue.html', form=form)
 
@@ -457,15 +457,31 @@ def create_artist_form():
 
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
-    # called upon submitting the new artist listing form
-    # TODO: insert form data as a new Venue record in the db, instead
-    # TODO: modify data to be the data object returned from db insertion
-
-    # on successful db insert, flash success
-    flash('Artist ' + request.form['name'] + ' was successfully listed!')
-    # TODO: on unsuccessful db insert, flash an error instead.
-    # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
-    return render_template('pages/home.html')
+    form = ArtistForm(request.form)
+    artist_name = request.form['name']
+    # return json.dumps(request.form)
+    if form.validate():
+        error = False
+        try:
+            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=request.form['phone'], genres=request.form.getlist('genres'), facebook_link=request.form['facebook_link'], image_link=request.form['image_link'], website_link=request.form['website_link'], seeking_venue=strtobool(request.form['seeking_venue']), seeking_description=request.form['seeking_description']))
+            db.session.commit()
+        except:
+            error = True
+            db.session.rollback()
+            print(sys.exc_info())
+        finally:
+            db.session.close()
+        if not error:
+            flash('Artist ' + artist_name + ' was successfully listed!', 'success')
+            return render_template('pages/home.html')
+        else:
+            flash('An error occurred. Artist ' +
+                artist_name + ' could not be listed.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+    else:
+        flash('Artist ' + artist_name + ' could not be created due to validation error(s)!', 'error')
+        flash(form.errors)
+        return render_template('forms/new_artist.html', form=form)
 
 
 #  Shows
