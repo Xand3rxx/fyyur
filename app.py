@@ -462,22 +462,40 @@ def edit_artist_submission(artist_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
+    venue = Venue.query.get_or_404(venue_id)
+
     form = VenueForm()
-    venue = {
-        "id": 1,
-        "name": "The Musical Hop",
-        "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-        "address": "1015 Folsom Street",
-        "city": "San Francisco",
-        "state": "CA",
-        "phone": "123-123-1234",
-        "website": "https://www.themusicalhop.com",
-        "facebook_link": "https://www.facebook.com/TheMusicalHop",
-        "seeking_talent": True,
-        "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-        "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
-    }
+    # venue = {
+    #     "id": 1,
+    #     "name": "The Musical Hop",
+    #     "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
+    #     "address": "1015 Folsom Street",
+    #     "city": "San Francisco",
+    #     "state": "CA",
+    #     "phone": "123-123-1234",
+    #     "website": "https://www.themusicalhop.com",
+    #     "facebook_link": "https://www.facebook.com/TheMusicalHop",
+    #     "seeking_talent": True,
+    #     "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
+    #     "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
+    # }
     # TODO: populate form with values from venue with ID <venue_id>
+
+    venue = {
+        "id": venue.id,
+        "name": venue.name,
+        "city": venue.city,
+        "state": venue.state,
+        "address": venue.address,
+        "phone": venue.phone,
+        "genres": venue.genres,
+        "image_link": venue.image_link,
+        "facebook_link": venue.facebook_link,
+        "website_link": venue.website_link,
+        "seeking_talent": venue.seeking_talent,
+        "seeking_description": venue.seeking_description,
+    }
+
     return render_template('forms/edit_venue.html', form=form, venue=venue)
 
 
@@ -485,7 +503,43 @@ def edit_venue(venue_id):
 def edit_venue_submission(venue_id):
     # TODO: take values from the form submitted, and update existing
     # venue record with ID <venue_id> using the new attributes
-    return redirect(url_for('show_venue', venue_id=venue_id))
+    venue = Venue.query.get_or_404(venue_id)
+
+    form = VenueForm(request.form)
+    venue_name = request.form['name']
+    if form.validate():
+        error = False
+        try:
+            venue.name = request.form['name']
+            venue.city = request.form['city']
+            venue.state = request.form['state']
+            venue.address = request.form['address']
+            venue.phone = request.form['phone']
+            venue.genres = request.form.getlist('genres')
+            venue.image_link = request.form['image_link']
+            venue.facebook_link = request.form['facebook_link']
+            venue.website_link = request.form['website_link']
+            venue.seeking_talent = strtobool(request.form['seeking_talent'])
+            venue.seeking_description = request.form['seeking_description']
+            db.session.commit()
+        except:
+            error = True
+            db.session.rollback()
+            print(sys.exc_info())
+        finally:
+            db.session.close()
+        if not error:
+            flash('Venue ' + venue_name + ' was successfully updated!', 'success')
+            return redirect(url_for('show_venue', venue_id=venue_id))
+        else:
+            flash('An error occurred. Venue ' +
+                venue_name + ' could not be updated.', 'error')
+            return redirect(url_for('edit_venue', venue_id=venue_id))
+    else:
+        flash('Venue ' + venue_name + ' could not be updated due to validation error(s)!', 'error')
+        flash(form.errors)
+        return redirect(url_for('edit_venue', venue_id=venue_id))
+
 
 #  Create Artist
 #  ----------------------------------------------------------------
