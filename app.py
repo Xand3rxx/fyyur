@@ -6,7 +6,6 @@ import json
 import os
 import sys
 import dateutil.parser
-from distutils.util import strtobool
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
@@ -23,6 +22,7 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.sql import text
 import collections
 collections.Callable = collections.abc.Callable
+from sqlalchemy import desc
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -99,7 +99,7 @@ def venues():
     data = []
 
     # Get list of venues
-    venues = Venue.query.all()
+    venues = Venue.query.with_entities(Venue.city, Venue.state).distinct(Venue.city, Venue.state).all()
 
     for venue in venues:
         data.append({
@@ -113,18 +113,42 @@ def venues():
 
 
 @app.route('/venues/search', methods=['POST'])
+@csrf.exempt
 def search_venues():
     # TODO: implement search on venues with partial string search. Ensure it is case-insensitive.
     # seach for Hop should return "The Musical Hop".
     # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
+    # response = {
+    #     "count": 1,
+    #     "data": [{
+    #         "id": 2,
+    #         "name": "The Dueling Pianos Bar",
+    #         "num_upcoming_shows": 0,
+    #     }]
+    # }
+
+    search_term = request.form['search_term']
+
+    if search_term == "":
+        flash('Please specify the name of the venue in your search phrase.', 'error')
+        return redirect(url_for('venues'))
+
+    results = Venue.query.filter(Venue.name.ilike('%' + search_term + '%')).order_by(desc(Venue.id)).all()
+
+    data = []
+
+    for venue in results:
+        data.append({
+            "id": venue.id,
+            "name": venue.name,
+            "num_upcoming_shows": len(Venue.query.join(Venue.shows).filter(Show.start_time > datetime.now()).all()),
+        })
+
     response = {
-        "count": 1,
-        "data": [{
-            "id": 2,
-            "name": "The Dueling Pianos Bar",
-            "num_upcoming_shows": 0,
-        }]
+        "count": len(results),
+        "data": data
     }
+
     return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
 
@@ -220,6 +244,7 @@ def show_venue(venue_id):
     else:
         past_shows = []
         upcoming_shows = []
+        current_date = datetime.now()
 
         for show in venue.shows:
             data = {
@@ -228,9 +253,9 @@ def show_venue(venue_id):
                 "artist_image_link": show.artist.image_link,
                 "start_time": format_datetime(str(show.start_time))
             }
-            if show.start_time > datetime.now():
+            if show.start_time > current_date:
                 upcoming_shows.append(data)
-            elif show.start_time < datetime.now():
+            elif show.start_time < current_date:
                 past_shows.append(data)
 
         data = {
@@ -271,10 +296,32 @@ def create_venue_submission():
 
     form = VenueForm(request.form)
     venue_name = request.form['name']
+    phone = request.form['phone']
+    image_link = request.form['image_link']
+    website_link = request.form['website_link']
+    seeking_talent = request.form.get('seeking_talent', False)
+    seeking_description = request.form['seeking_description']
     if form.validate():
         error = False
+        if phone == "":
+            flash('Please provide a phone number with a maximum length of 15 characters.', 'error')
+            return render_template('forms/new_venue.html', form=form)
+        if image_link == "":
+            flash('Please provide a valid URL for the image link.', 'error')
+            return render_template('forms/new_venue.html', form=form)
+        if website_link == "":
+            flash('Please provide a valid URL for the website link.', 'error')
+            return render_template('forms/new_venue.html', form=form)
+        if seeking_talent == "y":
+            seeking_talent = True
+            if seeking_description == "":
+                flash('Please enter a description for the talent you seek.', 'error')
+                return render_template('forms/new_venue.html', form=form)
+        else:
+            seeking_talent = False
+
         try:
-            db.session.add(Venue(name=venue_name, city=request.form['city'], state=request.form['state'], address=request.form['address'], genres=request.form.getlist('genres'), phone=request.form['phone'], facebook_link=request.form['facebook_link'], image_link=request.form['image_link'], website_link=request.form['website_link'], seeking_talent=strtobool(request.form['seeking_talent']), seeking_description=request.form['seeking_description']))
+            db.session.add(Venue(name=venue_name, city=request.form['city'], state=request.form['state'], address=request.form['address'], genres=request.form.getlist('genres'), phone=phone, facebook_link=request.form['facebook_link'], image_link=image_link, website_link=website_link, seeking_talent=seeking_talent, seeking_description=seeking_description))
             db.session.commit()
         except:
             error = True
@@ -331,29 +378,53 @@ def artists():
     #     "name": "The Wild Sax Band",
     # }]
 
-    artists = Artist.query.all()
+    artists = Artist.query.order_by(desc(Artist.id)).all()
     data = []
     for artist in artists:
         data.append({
-        "id": artist.id,
-        "name": artist.name
+            "id": artist.id,
+            "name": artist.name
         })
     return render_template('pages/artists.html', artists=data)
 
 
 @app.route('/artists/search', methods=['POST'])
+@csrf.exempt
 def search_artists():
     # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
     # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
     # search for "band" should return "The Wild Sax Band".
+    # response = {
+    #     "count": 1,
+    #     "data": [{
+    #         "id": 4,
+    #         "name": "Guns N Petals",
+    #         "num_upcoming_shows": 0,
+    #     }]
+    # }
+
+    search_term = request.form['search_term']
+
+    if search_term == "":
+        flash('Please specify the name of the artist in your search phrase.', 'error')
+        return redirect(url_for('artists'))
+
+    results = Artist.query.filter(Artist.name.ilike('%' + search_term + '%')).order_by(desc(Artist.id)).all()
+
+    data = []
+
+    for artist in results:
+        data.append({
+            "id": artist.id,
+            "name": artist.name,
+            "num_upcoming_shows": len(Artist.query.join(Artist.shows).filter(Show.start_time > datetime.now()).all()),
+        })
+
     response = {
-        "count": 1,
-        "data": [{
-            "id": 4,
-            "name": "Guns N Petals",
-            "num_upcoming_shows": 0,
-        }]
+        "count": len(results),
+        "data": data
     }
+
     return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
 
 
@@ -443,6 +514,7 @@ def show_artist(artist_id):
     else:
         past_shows = []
         upcoming_shows = []
+        current_date = datetime.now()
 
         for show in artist.shows:
             data = {
@@ -451,9 +523,9 @@ def show_artist(artist_id):
                 "venue_image_link": show.venue.image_link,
                 "start_time": format_datetime(str(show.start_time))
             }
-            if show.start_time > datetime.now():
+            if show.start_time > current_date:
                 upcoming_shows.append(data)
-            elif show.start_time < datetime.now():
+            elif show.start_time < current_date:
                 past_shows.append(data)
 
         data = {
@@ -525,20 +597,44 @@ def edit_artist_submission(artist_id):
 
     form = ArtistForm(request.form)
     artist_name = request.form['name']
+    phone = request.form['phone']
+    image_link = request.form['image_link']
+    website_link = request.form['website_link']
+    seeking_venue = request.form.get('seeking_venue', False)
+    seeking_description = request.form['seeking_description']
+
+    if form.validate():
+        error = False
+        if phone == "":
+            flash('Please provide a phone number with a maximum length of 15 characters.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+        if image_link == "":
+            flash('Please provide a valid URL for the image link.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+        if website_link == "":
+            flash('Please provide a valid URL for the website link.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+        if seeking_venue == "y":
+            seeking_venue = True
+            if seeking_description == "":
+                flash('Please enter a description for the venue you seek.', 'error')
+                return render_template('forms/new_artist.html', form=form)
+        else:
+            seeking_venue = False
+
     if form.validate():
         error = False
         try:
             artist.name = request.form['name']
             artist.city = request.form['city']
             artist.state = request.form['state']
-            artist.phone = request.form['phone']
+            artist.phone = phone
             artist.genres = request.form.getlist('genres')
-            # artist.genres = ','.join(request.form['genres'])
-            artist.image_link = request.form['image_link']
+            artist.image_link = image_link
             artist.facebook_link = request.form['facebook_link']
-            artist.website_link = request.form['website_link']
-            artist.seeking_venue = strtobool(request.form['seeking_venue'])
-            artist.seeking_description = request.form['seeking_description']
+            artist.website_link = website_link
+            artist.seeking_venue = seeking_venue
+            artist.seeking_description = seeking_description
             db.session.commit()
         except:
             error = True
@@ -606,6 +702,30 @@ def edit_venue_submission(venue_id):
 
     form = VenueForm(request.form)
     venue_name = request.form['name']
+    phone = request.form['phone']
+    image_link = request.form['image_link']
+    website_link = request.form['website_link']
+    seeking_talent = request.form.get('seeking_talent', False)
+    seeking_description = request.form['seeking_description']
+    if form.validate():
+        error = False
+        if phone == "":
+            flash('Please provide a phone number with a maximum length of 15 characters.', 'error')
+            return redirect(url_for('show_venue', venue_id=venue_id))
+        if image_link == "":
+            flash('Please provide a valid URL for the image link.', 'error')
+            return redirect(url_for('show_venue', venue_id=venue_id))
+        if website_link == "":
+            flash('Please provide a valid URL for the website link.', 'error')
+            return redirect(url_for('show_venue', venue_id=venue_id))
+        if seeking_talent == "y":
+            seeking_talent = True
+            if seeking_description == "":
+                flash('Please enter a description for the talent you seek.', 'error')
+                return redirect(url_for('show_venue', venue_id=venue_id))
+        else:
+            seeking_talent = False
+
     if form.validate():
         error = False
         try:
@@ -613,13 +733,13 @@ def edit_venue_submission(venue_id):
             venue.city = request.form['city']
             venue.state = request.form['state']
             venue.address = request.form['address']
-            venue.phone = request.form['phone']
+            venue.phone = phone
             venue.genres = request.form.getlist('genres')
-            venue.image_link = request.form['image_link']
+            venue.image_link = image_link
             venue.facebook_link = request.form['facebook_link']
-            venue.website_link = request.form['website_link']
-            venue.seeking_talent = strtobool(request.form['seeking_talent'])
-            venue.seeking_description = request.form['seeking_description']
+            venue.website_link = website_link
+            venue.seeking_talent = seeking_talent
+            venue.seeking_description = seeking_description
             db.session.commit()
         except:
             error = True
@@ -654,10 +774,35 @@ def create_artist_form():
 def create_artist_submission():
     form = ArtistForm(request.form)
     artist_name = request.form['name']
+    phone = request.form['phone']
+    image_link = request.form['image_link']
+    website_link = request.form['website_link']
+    seeking_venue = request.form.get('seeking_venue', False)
+    seeking_description = request.form['seeking_description']
+
+    if form.validate():
+        error = False
+        if phone == "":
+            flash('Please provide a phone number with a maximum length of 15 characters.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+        if image_link == "":
+            flash('Please provide a valid URL for the image link.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+        if website_link == "":
+            flash('Please provide a valid URL for the website link.', 'error')
+            return render_template('forms/new_artist.html', form=form)
+        if seeking_venue == "y":
+            seeking_venue = True
+            if seeking_description == "":
+                flash('Please enter a description for the venue you seek.', 'error')
+                return render_template('forms/new_artist.html', form=form)
+        else:
+            seeking_venue = False
+
     if form.validate():
         error = False
         try:
-            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=request.form['phone'], genres=request.form.getlist('genres'), facebook_link=request.form['facebook_link'], image_link=request.form['image_link'], website_link=request.form['website_link'], seeking_venue=strtobool(request.form['seeking_venue']), seeking_description=request.form['seeking_description']))
+            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=phone, genres=request.form.getlist('genres'), facebook_link=request.form['facebook_link'], image_link=image_link, website_link=website_link, seeking_venue=seeking_venue, seeking_description=seeking_description))
             db.session.commit()
         except:
             error = True
@@ -748,10 +893,17 @@ def create_shows():
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
     form = ShowForm(request.form)
+    artist_id = request.form['artist_id']
+    venue_id = request.form['venue_id']
+
+    if artist_id == '' or venue_id == '':
+        flash('Aritst ID or Venue ID cannot be blank.', 'error')
+        return render_template('forms/new_show.html', form=form)
+
     if form.validate():
         error = False
-        artist_exists = Artist.query.get(request.form['artist_id'])
-        venue_exists = Venue.query.get(request.form['venue_id'])
+        artist_exists = Artist.query.get(artist_id)
+        venue_exists = Venue.query.get(venue_id)
         if artist_exists == None:
             flash('The provided Artist ID does not exists.', 'error')
             return render_template('forms/new_show.html', form=form)
