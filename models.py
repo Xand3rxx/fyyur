@@ -1,13 +1,14 @@
 #----------------------------------------------------------------------------#
 # Model Imports
 #----------------------------------------------------------------------------#
-from app import db
+from flask_sqlalchemy import SQLAlchemy
 
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+db = SQLAlchemy()
 
 
 class Venue(db.Model):

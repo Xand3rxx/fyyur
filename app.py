@@ -13,7 +13,6 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 from forms import *
@@ -23,6 +22,7 @@ from sqlalchemy.sql import text
 import collections
 collections.Callable = collections.abc.Callable
 from sqlalchemy import desc, or_
+from models import *
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -33,12 +33,10 @@ moment = Moment(app)
 app.config.from_object(DatabaseConfgurations)
 
 # TODO: connect to a local postgresql database
-db = SQLAlchemy(app)
+db.init_app(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect()
 csrf.init_app(app)
-# To avoid the circular import error model file must be imported after the db instatiation
-from models import *
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -397,7 +395,7 @@ def create_venue_submission():
             db.session.close()
         if not error:
             flash('Venue ' + venue_name + ' was successfully listed!', 'success')
-            return render_template('pages/home.html')
+            return redirect(url_for('index'))
         else:
             flash('An error occurred. Venue ' +
                 venue_name + ' could not be listed.', 'error')
@@ -943,11 +941,12 @@ def create_artist_submission():
                 return render_template('forms/new_artist.html', form=form)
         else:
             seeking_venue = False
+# ",".join(map(str, request.form.getlist('genres')))
 
     if form.validate():
         error = False
         try:
-            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=phone, genres=",".join(map(str, request.form.getlist('genres'))), facebook_link=request.form['facebook_link'], image_link=image_link, website_link=website_link, seeking_venue=seeking_venue, seeking_description=seeking_description))
+            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=phone, genres=request.form.getlist('genres'), facebook_link=request.form['facebook_link'], image_link=image_link, website_link=website_link, seeking_venue=seeking_venue, seeking_description=seeking_description))
             db.session.commit()
         except:
             error = True
@@ -957,7 +956,7 @@ def create_artist_submission():
             db.session.close()
         if not error:
             flash('Artist ' + artist_name + ' was successfully listed!', 'success')
-            return render_template('pages/home.html')
+            return redirect(url_for('index'))
         else:
             flash('An error occurred. Artist ' +
                 artist_name + ' could not be listed.', 'error')
@@ -1066,7 +1065,7 @@ def create_show_submission():
             db.session.close()
         if not error:
             flash('Show was successfully listed!', 'success')
-            return render_template('pages/home.html')
+            return redirect(url_for('index'))
         else:
             flash('An error occurred. Show could not be listed.', 'error')
             return render_template('forms/new_show.html', form=form)
