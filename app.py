@@ -310,7 +310,7 @@ def show_venue(venue_id):
     else:
         past_shows = []
         upcoming_shows = []
-        current_date = datetime.now()
+        current_datetime = datetime.now()
 
         for show in venue.shows:
             data = {
@@ -319,9 +319,9 @@ def show_venue(venue_id):
                 "artist_image_link": show.artist.image_link,
                 "start_time": format_datetime(str(show.start_time))
             }
-            if show.start_time > current_date:
+            if show.start_time > current_datetime:
                 upcoming_shows.append(data)
-            elif show.start_time < current_date:
+            elif show.start_time < current_datetime:
                 past_shows.append(data)
 
         data = {
@@ -650,7 +650,7 @@ def show_artist(artist_id):
     else:
         past_shows = []
         upcoming_shows = []
-        current_date = datetime.now()
+        current_datetime = datetime.now()
 
         for show in artist.shows:
             data = {
@@ -659,9 +659,9 @@ def show_artist(artist_id):
                 "venue_image_link": show.venue.image_link,
                 "start_time": format_datetime(str(show.start_time))
             }
-            if show.start_time > current_date:
+            if show.start_time > current_datetime:
                 upcoming_shows.append(data)
-            elif show.start_time < current_date:
+            elif show.start_time < current_datetime:
                 past_shows.append(data)
 
         data = {

@@ -27,7 +27,7 @@ class Venue(db.Model):
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
     seeking_talent = db.Column(db.Boolean, nullable=False)
     seeking_description = db.Column(db.String(120), nullable=True)
-    shows = db.relationship('Show', backref=('venue'))
+    shows = db.relationship('Show', cascade="all, delete-orphan", backref=('venue'))
 
 
 class Artist(db.Model):
