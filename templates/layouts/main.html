@@ -63,6 +63,14 @@
                   placeholder="Find a venue"
                   aria-label="Search">
               </form>
+
+              <form class="search" method="post" action="/venues/filter">
+                <input class="form-control"
+                  type="search"
+                  name="search_term"
+                  placeholder="Find a venue by City or State name"
+                  aria-label="Search">
+              </form>
               {% endif %}
               {% if (request.endpoint == 'artists') or
                 (request.endpoint == 'search_artists') or
@@ -72,6 +80,14 @@
                   type="search"
                   name="search_term"
                   placeholder="Find an artist"
+                  aria-label="Search">
+              </form>
+
+              <form class="search" method="post" action="/artists/filter">
+                <input class="form-control"
+                  type="search"
+                  name="search_term"
+                  placeholder="Find an artist by City or State name"
                   aria-label="Search">
               </form>
               {% endif %}

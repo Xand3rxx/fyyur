@@ -76,7 +76,15 @@
 	</div>
 </section>
 
-<a href="/venues/{{ venue.id }}/edit"><button class="btn btn-primary btn-lg">Edit</button></a>
+<a href="/venues/{{ venue.id }}/edit"><button class="btn btn-primary btn-lg" style="margin-bottom: 2px;">Edit</button></a>
+
+<form action="{{ url_for('delete_venue', venue_id=venue.id) }}" method="delete">
+	<!-- <input type="hidden" name="" value="" /> -->
+	<button type="submit" class="btn btn btn-danger btn-lg">Delete</button>
+</form>
+ 
+<!-- <button type="button" id="delete-venue" data-type="venue" data-url="{{ url_for('delete_venue', venue_id=venue.id) }}" data-id="{{ venue.id }}" class="btn btn-danger btn-lg">Delete</button> -->
+
 
 {% endblock %}
 

@@ -7,7 +7,7 @@ import os
 import sys
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, Response, flash, redirect, url_for, jsonify
 from flask_moment import Moment
 import logging
 from logging import Formatter, FileHandler
@@ -22,7 +22,7 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.sql import text
 import collections
 collections.Callable = collections.abc.Callable
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -63,7 +63,28 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/')
 def index():
-    return render_template('pages/home.html')
+    # Get the list of recently created artists
+    artists = Artist.query.order_by(desc(Artist.id)).limit(10).all()
+    new_artists = []
+    for artist in artists:
+        new_artists.append({
+            "id": artist.id,
+            "name": artist.name
+        })
+
+
+    # Get the list of recently created venues
+    venues = Venue.query.order_by(desc(Venue.id)).limit(10).all()
+    new_venues = []
+    for venue in venues:
+        new_venues.append({
+            "id": venue.id,
+            "name": venue.name,
+            "city": venue.city,
+            "state": venue.state,
+        })
+
+    return render_template('pages/home.html', artists=new_artists, venues=new_venues)
 
 
 #  Venues
@@ -135,6 +156,51 @@ def search_venues():
 
     results = Venue.query.filter(Venue.name.ilike('%' + search_term + '%')).order_by(desc(Venue.id)).all()
 
+    data = []
+
+    for venue in results:
+        data.append({
+            "id": venue.id,
+            "name": venue.name,
+            "num_upcoming_shows": len(Venue.query.join(Venue.shows).filter(Show.start_time > datetime.now()).all()),
+        })
+
+    response = {
+        "count": len(results),
+        "data": data
+    }
+
+    return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
+
+
+@app.route('/venues/filter', methods=['POST'])
+@csrf.exempt
+def filter_venues():
+    # TODO: Implement Search Venues by City and State. Searching by "San Francisco, CA" should return all venues in San Francisco, CA.
+
+    # Get the search phrase from the search input field
+    search_term = request.form['search_term']
+
+    # Remove comma from the search phrase and split into city and state
+    filtered_city = search_term.rsplit(',', 1)[0]
+    filtered_state = search_term.rsplit(',', 1)[1]
+
+    # Remove quoutes from split
+    filtered_city = filtered_city.replace('"', '')
+    filtered_state = filtered_state.replace('"', '')
+
+    # Remove leadnig whitespace from the filtered state
+    filtered_state = filtered_state.lstrip()
+
+    # Validate search field
+    if search_term == "":
+        flash('Please specify the city or state of the venue in your search phrase.', 'error')
+        return redirect(url_for('venues'))
+
+    # Query venues that match the filtered city and state
+    results = Venue.query.filter_by(city=filtered_city).filter_by(state=filtered_state).all()
+
+    # Array to store mapped objects from results
     data = []
 
     for venue in results:
@@ -351,14 +417,38 @@ def create_venue_submission():
         return render_template('forms/new_venue.html', form=form)
 
 
-@app.route('/venues/<venue_id>', methods=['DELETE'])
+@app.route('/venues/<venue_id>/', methods=['DELETE'])
 def delete_venue(venue_id):
     # TODO: Complete this endpoint for taking a venue_id, and using
     # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
 
     # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
     # clicking that button delete it from the db then redirect the user to the homepage
-    return None
+    # return jsonify({
+    #     "id": venue_id
+    # })
+    venue = Venue.query.get(venue_id)
+    if venue == None:
+        flash('This Venue ID(' + str(venue_id) + ') does not exist.', 'error')
+        return redirect(url_for('pages/show_venue', venue_id=venue_id))
+
+    error = False
+    try:
+        db.session.delete(venue)
+        db.session.commit()
+    except:
+        error = True
+        db.session.rollback()
+        print(sys.exc_info())
+    finally:
+        db.session.close()
+    if not error:
+        flash('Venue ' + venue.name + ' was successfully deleted!', 'success')
+        return redirect(url_for('index'))
+    else:
+        flash('An error occurred. Venue ' +
+            venue.name + ' could not be deleted.', 'error')
+        return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  Artists
 #  ----------------------------------------------------------------
@@ -378,7 +468,7 @@ def artists():
     #     "name": "The Wild Sax Band",
     # }]
 
-    artists = Artist.query.order_by(desc(Artist.id)).all()
+    artists = Artist.query.all()
     data = []
     for artist in artists:
         data.append({
@@ -411,6 +501,50 @@ def search_artists():
 
     results = Artist.query.filter(Artist.name.ilike('%' + search_term + '%')).order_by(desc(Artist.id)).all()
 
+    data = []
+
+    for artist in results:
+        data.append({
+            "id": artist.id,
+            "name": artist.name,
+            "num_upcoming_shows": len(Artist.query.join(Artist.shows).filter(Show.start_time > datetime.now()).all()),
+        })
+
+    response = {
+        "count": len(results),
+        "data": data
+    }
+
+    return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+
+@app.route('/artists/filter', methods=['POST'])
+@csrf.exempt
+def filter_artists():
+    # TODO: Implement Search Artists by City and State. Searching by "San Francisco, CA" should return all venues in San Francisco, CA.
+
+    # Get the search phrase from the search input field
+    search_term = request.form['search_term']
+
+    # Remove comma from the search phrase and split into city and state
+    filtered_city = search_term.rsplit(',', 1)[0]
+    filtered_state = search_term.rsplit(',', 1)[1]
+
+    # Remove quoutes from split
+    filtered_city = filtered_city.replace('"', '')
+    filtered_state = filtered_state.replace('"', '')
+
+    # Remove leadnig whitespace from the filtered state
+    filtered_state = filtered_state.lstrip()
+
+    # Validate search field
+    if search_term == "":
+        flash('Please specify the city or state of the artist in your search phrase.', 'error')
+        return redirect(url_for('artists'))
+
+     # Query artists that match the filtered city and state
+    results = Artist.query.filter_by(city=filtered_city).filter_by(state=filtered_state).all()
+
+    # Array to store mapped objects from results
     data = []
 
     for artist in results:
@@ -629,7 +763,7 @@ def edit_artist_submission(artist_id):
             artist.city = request.form['city']
             artist.state = request.form['state']
             artist.phone = phone
-            artist.genres = request.form.getlist('genres')
+            artist.genres = ",".join(map(str, request.form.getlist('genres')))
             artist.image_link = image_link
             artist.facebook_link = request.form['facebook_link']
             artist.website_link = website_link
@@ -802,7 +936,7 @@ def create_artist_submission():
     if form.validate():
         error = False
         try:
-            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=phone, genres=request.form.getlist('genres'), facebook_link=request.form['facebook_link'], image_link=image_link, website_link=website_link, seeking_venue=seeking_venue, seeking_description=seeking_description))
+            db.session.add(Artist(name=artist_name, city=request.form['city'], state=request.form['state'], phone=phone, genres=",".join(map(str, request.form.getlist('genres'))), facebook_link=request.form['facebook_link'], image_link=image_link, website_link=website_link, seeking_venue=seeking_venue, seeking_description=seeking_description))
             db.session.commit()
         except:
             error = True
@@ -867,7 +1001,7 @@ def shows():
     #     "start_time": "2035-04-15T20:00:00.000Z"
     # }]
 
-    shows = Show.query.all()
+    shows = Show.query.order_by(desc(Show.id)).all()
     data = []
 
     for show in shows:
