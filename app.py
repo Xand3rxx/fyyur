@@ -640,7 +640,10 @@ def show_artist(artist_id):
     # data = list(filter(lambda d: d['id'] ==
     #             artist_id, [data1, data2, data3]))[0]
 
+    # Check if artist ID exists
     artist = Artist.query.get(artist_id)
+
+    # If result returns None, return back with error message
     if artist == None:
         flash('This Artist ID(' + str(artist_id) + ') does not exist.', 'error')
         return redirect(url_for('artists'))
@@ -688,9 +691,6 @@ def show_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
-    # artist = Artist.query.get_or_404(artist_id)
-
-    form = ArtistForm()
     # artist = {
     #     "id": 4,
     #     "name": "Guns N Petals",
@@ -706,6 +706,12 @@ def edit_artist(artist_id):
     # }
     # TODO: populate form with fields from artist with ID <artist_id>
 
+    artist = Artist.query.get(artist_id)
+    if artist == None:
+        flash('This Aritst ID(' + str(artist_id) + ') does not exist.', 'error')
+        return redirect(url_for('venues'))
+
+    form = ArtistForm()
     artist = {
         "id": artist.id,
         "name": artist.name,
@@ -791,9 +797,6 @@ def edit_artist_submission(artist_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
-    venue = Venue.query.get_or_404(venue_id)
-
-    form = VenueForm()
     # venue = {
     #     "id": 1,
     #     "name": "The Musical Hop",
@@ -810,6 +813,12 @@ def edit_venue(venue_id):
     # }
     # TODO: populate form with values from venue with ID <venue_id>
 
+    venue = Venue.query.get(venue_id)
+    if venue == None:
+        flash('This Venue ID(' + str(venue_id) + ') does not exist.', 'error')
+        return redirect(url_for('venues'))
+
+    form = VenueForm()
     venue = {
         "id": venue.id,
         "name": venue.name,
