@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask_wtf import Form
 from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField, HiddenField
-from wtforms.validators import DataRequired, AnyOf, URL
+from wtforms.validators import DataRequired, AnyOf, URL, ValidationError
 
 
 class ShowForm(Form):
@@ -91,9 +91,36 @@ class VenueForm(Form):
     image_link = StringField(
         'image_link'
     )
+
+    def validate_selected_genre(form, genres):
+        genres = [
+            'Alternative',
+            'Blues',
+            'Classical',
+            'Country',
+            'Electronic',
+            'Folk',
+            'Funk',
+            'Hip-Hop',
+            'Heavy Metal',
+            'Instrumental',
+            'Jazz',
+            'Musical Theatre',
+            'Pop',
+            'Punk',
+            'R&B',
+            'Reggae',
+            'Rock n Roll',
+            'Soul',
+            'Other'
+        ]
+        for genre in genres:
+            if genre not in genres:
+                raise ValidationError('The selected genre does not exist.')
+
     genres = SelectMultipleField(
         # TODO implement enum restriction
-        'genres', validators=[DataRequired()],
+        'genres', validators=[DataRequired(), validate_selected_genre],
         choices=[
             ('Alternative', 'Alternative'),
             ('Blues', 'Blues'),
@@ -122,7 +149,6 @@ class VenueForm(Form):
     website_link = StringField(
         'website_link'
     )
-
     seeking_talent = BooleanField('seeking_talent')
 
     seeking_description = StringField(
@@ -196,13 +222,40 @@ class ArtistForm(Form):
     )
     phone = StringField(
         # TODO implement validation logic for phone
-        'phone'
+        'phone', validators=[DataRequired()]
     )
     image_link = StringField(
         'image_link'
     )
+
+    def validate_selected_artist_genre(form, genres):
+        genres = [
+            'Alternative',
+            'Blues',
+            'Classical',
+            'Country',
+            'Electronic',
+            'Folk',
+            'Funk',
+            'Hip-Hop',
+            'Heavy Metal',
+            'Instrumental',
+            'Jazz',
+            'Musical Theatre',
+            'Pop',
+            'Punk',
+            'R&B',
+            'Reggae',
+            'Rock n Roll',
+            'Soul',
+            'Other'
+        ]
+        for genre in genres:
+            if genre not in genres:
+                raise ValidationError('The selected genre does not exist.')
     genres = SelectMultipleField(
-        'genres', validators=[DataRequired()],
+        # TODO implement enum restriction
+        'genres', validators=[DataRequired(), validate_selected_artist_genre],
         choices=[
             ('Alternative', 'Alternative'),
             ('Blues', 'Blues'),
@@ -226,7 +279,6 @@ class ArtistForm(Form):
         ]
     )
     facebook_link = StringField(
-        # TODO implement enum restriction
         'facebook_link', validators=[URL()]
     )
 

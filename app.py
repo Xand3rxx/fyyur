@@ -417,16 +417,15 @@ def create_venue_submission():
         return render_template('forms/new_venue.html', form=form)
 
 
-@app.route('/venues/<venue_id>/', methods=['DELETE'])
+@app.route('/venues/<venue_id>/', methods=['POST'])
+@csrf.exempt
 def delete_venue(venue_id):
     # TODO: Complete this endpoint for taking a venue_id, and using
     # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
 
     # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
     # clicking that button delete it from the db then redirect the user to the homepage
-    # return jsonify({
-    #     "id": venue_id
-    # })
+    
     venue = Venue.query.get(venue_id)
     if venue == None:
         flash('This Venue ID(' + str(venue_id) + ') does not exist.', 'error')
@@ -841,7 +840,10 @@ def edit_venue(venue_id):
 def edit_venue_submission(venue_id):
     # TODO: take values from the form submitted, and update existing
     # venue record with ID <venue_id> using the new attributes
-    venue = Venue.query.get_or_404(venue_id)
+    venue = Venue.query.get(venue_id)
+    if venue == None:
+        flash('This Venue ID(' + str(venue_id) + ') does not exist.', 'error')
+        return redirect(url_for('venues'))
 
     form = VenueForm(request.form)
     venue_name = request.form['name']
