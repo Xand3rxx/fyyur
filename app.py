@@ -179,6 +179,16 @@ def filter_venues():
     # Get the search phrase from the search input field
     search_term = request.form['search_term']
 
+     # Validate search field
+    if search_term == "":
+        flash('Please specify the city or state of the venue in your search phrase.', 'error')
+        return redirect(url_for('venues'))
+
+    # Validate if search query contains a comma
+    if "," not in search_term:
+        flash('Search phrase is not in its correct format.', 'error')
+        return redirect(url_for('venues'))
+
     # Remove comma from the search phrase and split into city and state
     filtered_city = search_term.rsplit(',', 1)[0]
     filtered_state = search_term.rsplit(',', 1)[1]
@@ -190,9 +200,9 @@ def filter_venues():
     # Remove leadnig whitespace from the filtered state
     filtered_state = filtered_state.lstrip()
 
-    # Validate search field
-    if search_term == "":
-        flash('Please specify the city or state of the venue in your search phrase.', 'error')
+    # Validate if search query contains a string after stripping comma
+    if filtered_state == "":
+        flash('Search phrase is not in its correct format.', 'error')
         return redirect(url_for('venues'))
 
     # Query venues that match the filtered city and state
@@ -522,7 +532,17 @@ def filter_artists():
     # Get the search phrase from the search input field
     search_term = request.form['search_term']
 
-    # Remove comma from the search phrase and split into city and state
+    # Validate search field
+    if search_term == "":
+        flash('Please specify the city or state of the artist in your search phrase.', 'error')
+        return redirect(url_for('artists'))
+    
+    # Validate if search query contains a comma
+    if "," not in search_term:
+        flash('Search phrase is not in its correct format.', 'error')
+        return redirect(url_for('artists'))
+
+    #Remove comma from the search phrase and split into city and state
     filtered_city = search_term.rsplit(',', 1)[0]
     filtered_state = search_term.rsplit(',', 1)[1]
 
@@ -533,12 +553,12 @@ def filter_artists():
     # Remove leadnig whitespace from the filtered state
     filtered_state = filtered_state.lstrip()
 
-    # Validate search field
-    if search_term == "":
-        flash('Please specify the city or state of the artist in your search phrase.', 'error')
-        return redirect(url_for('artists'))
+    # Validate if search query contains a string after stripping comma
+    if filtered_state == "":
+        flash('Search phrase is not in its correct format.', 'error')
+        return redirect(url_for('venues'))
 
-     # Query artists that match the filtered city and state
+    # Query artists that match the filtered city and state
     results = Artist.query.filter_by(city=filtered_city).filter_by(state=filtered_state).all()
 
     # Array to store mapped objects from results
